@@ -1,0 +1,62 @@
+- name: Install docker
+  package: 
+    name: docker
+    state: latest
+
+- name: Install docker-compose from official github repo
+  get_url:
+    url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 'u+x,g+x'
+  
+- name: Create symlink for docker-compose
+  file: 
+    src: /usr/local/bin/docker-compose
+    dest: /usr/bin/docker-compose
+    state: link
+
+- name: Create a docker directory if it doesn't exist
+  file:
+    path: "/home/{{ username }}/docker"
+    state: directory
+    # mode: '0755'
+
+- name: Copy docker-compose for nextcloud
+  copy: 
+    src:  "{{ playbook_dir }}/docker/docker-compose.yml"
+    dest: "/home/{{username}}/docker"
+
+- name: Make sure a docker service is running
+  systemd:
+    state: started
+    name: docker
+
+- name: Make sure requirements are met to run docker module
+  pip:
+    name: 
+    - requests
+    - docker
+    - docker-compose
+    state: present
+
+- name: deploy Docker Compose stack
+  docker_compose:
+    project_src: /home/{{ username }}/docker
+    files:
+    - docker-compose.yml
+
+- name: Chaneg max file upload size
+  ansible.builtin.lineinfile:
+    path: "/home/{{ username }}/docker/proxy/conf.d/customproxysettings.conf"
+    line: client_max_body_size 100m;
+    create: yes
+  register: config_changed
+
+- name: Stop all services
+  community.docker.docker_compose:
+    project_src: /home/{{ username }}/docker
+    build: no
+    restarted: yes
+  when: config_changed.changed
+
+

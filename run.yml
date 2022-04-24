@@ -4,3 +4,4 @@
 
   tasks:
    - import_tasks: tasks/essentials.yml
+   - import_tasks: tasks/docker.yml
