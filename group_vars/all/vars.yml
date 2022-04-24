@@ -1,0 +1,3 @@
+username: ec2-user
+packages:
+  - vim
